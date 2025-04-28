@@ -1,0 +1,27 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Sample data (replace with your actual data)
+data = {
+    'Assembly Method': ['Hybrid', 'Long Reads', 'Short Reads', 'Hybrid', 'Long Reads', 'Short Reads', 'Hybrid', 'Long Reads', 'Short Reads', 'Hybrid', 'Long Reads', 'Short Reads'],
+    'Metric': ['N50', 'N50', 'N50', 'Genome Size', 'Genome Size', 'Genome Size', 'BUSCO Score', 'BUSCO Score', 'BUSCO Score', 'Contigs', 'Contigs', 'Contigs'],
+    'Value': [9e+05, 6e+05, 1e+05, 400, 380, 350, 80, 70, 50, 10000, 12000, 150000]  # Example values
+}
+df = pd.DataFrame(data)
+
+# Create the grouped bar chart
+fig, ax = plt.subplots(figsize=(10, 6))  # Adjust figure size as needed
+df.pivot(index='Assembly Method', columns='Metric', values='Value').plot(kind='bar', ax=ax)
+
+# Add labels and title
+ax.set_xlabel('Assembly Method')
+ax.set_ylabel('Value')
+ax.set_title('Comparison of Genome Assembly Methods')
+plt.xticks(rotation=45)  # Rotate x-axis labels for readability
+plt.legend(title='Metric')  # Add a legend
+plt.tight_layout()  # Adjust layout to prevent labels from overlapping
+
+# Show the plot
+plt.show()
+# To save the plot
+# plt.savefig('assembly_comparison.png')
