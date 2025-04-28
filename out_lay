@@ -1,0 +1,56 @@
+import graphviz
+
+def create_pipeline_diagram(pipeline_steps, filename="pipeline_diagram"):
+    """
+    Creates a directed graph representing a pipeline.
+
+    Args:
+        pipeline_steps: A list of dictionaries, where each dictionary
+                        has 'name' and optionally 'label' keys.
+        filename: The name of the output file.
+    """
+    dot = graphviz.Digraph(comment='Genome Assembly Pipeline', filename=filename, format='png')
+    dot.attr('node', shape='box', style='rounded')  # Set node attributes
+
+    for step in pipeline_steps:
+        node_name = step['name']
+        node_label = step.get('label', node_name)  # Use label if provided, otherwise use name
+        dot.node(node_name, label=node_label)
+
+    # Add edges (arrows) based on the order of steps
+    for i in range(len(pipeline_steps) - 1):
+        dot.edge(pipeline_steps[i]['name'], pipeline_steps[i+1]['name'])
+
+    dot.render(cleanup=True)  # Render to a file (e.g., PNG) and cleanup
+
+# Example pipeline definition
+pipeline_long_read = [
+    {'name': 'LongReadData', 'label': 'Long Read\nData'},
+    {'name': 'CCSFile', 'label': 'CCS File\n(BAM to Fastq)'},
+    {'name': 'NanoStats'},
+    {'name': 'Assembler', 'label': 'ASSEMBLER\n(HiFiASM,\nWTDBG2, FLYE)'},
+    {'name': 'BUSCO_QUAST', 'label': 'BUSCO and\nQUAST'}
+]
+
+# Example of short read pipeline
+pipeline_short_read = [
+    {'name': 'ShortReadData', 'label': 'Short read\ndata'},
+    {'name': 'Fastqc', 'label': 'Fastqc'},
+    {'name': 'Fastp', 'label': 'Fastp'},
+    {'name': 'AssemblerShort', 'label': 'Assembler\n(Velvet and Spades)'},
+    {'name': 'PolishedAssembly', 'label': 'Polished assembly\n(flye long + short\nreads)'},
+    {'name': 'Pilon', 'label': 'Pilon for polished\nassembly'},
+    {'name': 'QCCheck', 'label': 'QC check'},
+    {'name': 'BUSCO_QUAST_Short', 'label': 'BUSCO and\nQUAST'}
+]
+
+pipeline_hybrid = [
+    {'name': 'LongReads', 'label': 'Long reads\n(Pacbio)'},
+    {'name': 'ShortReads', 'label': 'Short reads\n(Illumina)'},
+    {'name': 'AssemblerHybrid', 'label': 'ASSEMBLER\n(Masurca)'},
+     {'name': 'BUSCO_QUAST_Hybrid', 'label': 'BUSCO and\nQUAST'}
+]
+# Create the diagrams
+create_pipeline_diagram(pipeline_long_read, "long_read_pipeline")
+create_pipeline_diagram(pipeline_short_read, "short_read_pipeline")
+create_pipeline_diagram(pipeline_hybrid, "hybrid_pipeline")
