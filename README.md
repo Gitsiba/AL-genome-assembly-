@@ -2,7 +2,7 @@
 
 ## Project overview
 
-This project focuses on genome assembly of *Aeluropus lagopoides*, a salt-tolerant grass. **The assembly work was carried through to the contig level.** This means the work reached a draft contig assembly stage; it should not be described as chromosome-level or fully scaffolded unless additional evidence confirms that stage.
+This project focuses on genome assembly of *Aeluropus lagopoides*, a salt-tolerant grass. **The assembly work was carried through to the contig level.** This is a draft contig assembly milestone; it should not be described as chromosome-level or fully scaffolded unless further evidence confirms that stage.
 
 The repository documents assembly strategies and quality-assessment concepts, and includes the project poster, pipeline-diagram code, and a plotting script for comparing assembly metrics.
 
@@ -11,7 +11,7 @@ The repository documents assembly strategies and quality-assessment concepts, an
 - Worked on the *A. lagopoides* genome assembly through the **contig-level assembly stage**.
 - Documented short-read, long-read, and hybrid assembly strategies relevant to the project.
 - Identified assembly-quality measures used to evaluate draft assemblies, including contiguity, total assembly length, contig count, and BUSCO completeness where available.
-- Prepared code to generate reproducible assembly comparison plots from measured metrics.
+- Added a Docker environment for reproducible assembly-metric plotting and pipeline diagram generation.
 
 **Scope statement:** The confirmed project milestone stated here is contig-level assembly. This README does not claim chromosome-level assembly, scaffolding, gap closure, or any specific N50, genome size, BUSCO score, or contig count without values traceable to the original reports.
 
@@ -30,6 +30,60 @@ Long reads can help span repetitive regions. The existing pipeline-diagram scrip
 Uses paired-end short reads. The existing notes list Velvet and SPAdes as candidate assemblers. These are alternative approaches, not necessarily sequential steps.
 
 > These sections document strategies and tools; they do not imply that every listed assembler or polishing step was used for the final assembly. Cite the actual tool/version and commands used when adding detailed methods.
+
+## Docker implementation
+
+Docker packages the Python plotting dependencies and Graphviz so these helper scripts can run in a consistent environment. **This image currently containerizes plotting and pipeline-diagram utilities; it does not install or run the large genome assembly tools themselves (such as MaSuRCA, Flye, SPAdes, or BUSCO).**
+
+### Build the image
+
+From the repository root:
+
+```bash
+docker build -t al-genome-assembly .
+```
+
+### Check the plotting command
+
+```bash
+docker run --rm al-genome-assembly --help
+```
+
+### Generate plots from your own assembly metrics
+
+Copy the template and fill in values taken from actual assembly reports:
+
+```bash
+cp assembly_metrics_template.csv assembly_metrics.csv
+```
+
+Then run from the repository root (Linux/macOS shell):
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  al-genome-assembly \
+  assembly_metrics.csv --outdir figures
+```
+
+The output files will appear in the local `figures/` directory. Blank metrics are skipped; at least one actual numeric metric is required. Do not use example or invented values as observed results.
+
+### Generate pipeline diagrams
+
+The `out_lay` script uses Graphviz and is included in the image. Run it with the repository mounted so the PNG diagrams are saved into the working directory:
+
+```bash
+docker run --rm --entrypoint python \
+  -v "$PWD:/work" -w /work \
+  al-genome-assembly /app/out_lay
+```
+
+### Docker files
+
+- `Dockerfile` — Python base image, Graphviz system package, and project dependencies.
+- `requirements.txt` — Python dependencies.
+- `.dockerignore` — excludes Git metadata, caches, and common large sequencing files from the build context.
+- `.github/workflows/docker.yml` — builds the image and checks the plotting CLI on pushes and pull requests.
 
 ## Assembly quality metrics
 
@@ -50,18 +104,18 @@ Metrics should be calculated consistently and reported with software versions, p
 - `out_lay` — Python/Graphviz script for long-read, short-read, and hybrid pipeline diagrams.
 - `plot_assembly` — Python script that plots metrics from a user-supplied CSV.
 - `assembly_metrics_template.csv` — blank template for entering measured assembly metrics.
+- `Dockerfile`, `requirements.txt`, `.dockerignore` — reproducible container setup.
+- `.github/workflows/docker.yml` — automated Docker build check.
 
-## Generate comparison plots from real metrics
+## Run plotting without Docker
 
 Install requirements:
 
 ```bash
-python -m pip install pandas matplotlib
+python -m pip install -r requirements.txt
 ```
 
-Copy `assembly_metrics_template.csv` to `assembly_metrics.csv`, then fill in values from the actual assembly reports. Do not use estimates or illustrative values as observed results. Leave unavailable metrics blank.
-
-Run:
+Fill `assembly_metrics.csv` from actual reports, then run:
 
 ```bash
 python plot_assembly assembly_metrics.csv --outdir figures
