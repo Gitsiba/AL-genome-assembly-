@@ -1,0 +1,24 @@
+# Separate assembly image; keep plotting image lightweight.
+# Build with: docker build -f Dockerfile.assembly -t al-genome-assembly:assembly .
+# Note: this image provides the MaSuRCA assembler environment. Input data and
+# the project-specific MaSuRCA configuration must be supplied at runtime.
+FROM mambaorg/micromamba:1.5.8
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+USER $MAMBA_USER
+
+# Pin the assembler version for reproducibility. Check package availability
+# for your target platform before relying on this image in production.
+RUN micromamba install --yes --name base --channel conda-forge --channel bioconda \
+      masurca=4.1.0 \
+    && micromamba clean --all --yes
+
+WORKDIR /work
+ENV PATH="/opt/conda/bin:$PATH"
+
+# Keep this image interactive: the user supplies a verified MaSuRCA config
+# and input read files, and explicitly launches the assembly.
+CMD ["masurca", "--help"]
