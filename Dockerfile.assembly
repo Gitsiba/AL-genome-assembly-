@@ -17,8 +17,8 @@ RUN micromamba install --yes --name base --channel conda-forge --channel biocond
     && micromamba clean --all --yes
 
 WORKDIR /work
-ENV PATH="/opt/conda/bin:$PATH"
-
+# Use micromamba run so the base environment is activated reliably in
+# non-interactive Docker invocations and CI shells.
 # Keep this image interactive: the user supplies a verified MaSuRCA config
 # and input read files, and explicitly launches the assembly.
-CMD ["masurca", "--help"]
+CMD ["micromamba", "run", "-n", "base", "masurca", "--help"]
