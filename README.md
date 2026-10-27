@@ -1,78 +1,65 @@
 # *Aeluropus lagopoides* Genome Assembly
 
-A reproducible project documenting genome assembly strategies for *Aeluropus lagopoides*, a salt-tolerant grass. The repository currently contains a project poster, pipeline-diagram code, an assembly-comparison plotting script, and notes on short-read, long-read, and hybrid assembly workflows.
+## Project overview
 
-> **Reproducibility note:** The repository's plotting script previously contained illustrative example values. Those values are not verified project results and must not be interpreted as measurements from the *A. lagopoides* assembly. The updated script reads a user-supplied metrics table instead.
+This project focuses on genome assembly of *Aeluropus lagopoides*, a salt-tolerant grass. **The assembly work was carried through to the contig level.** This means the work reached a draft contig assembly stage; it should not be described as chromosome-level or fully scaffolded unless additional evidence confirms that stage.
 
-## Project goals
+The repository documents assembly strategies and quality-assessment concepts, and includes the project poster, pipeline-diagram code, and a plotting script for comparing assembly metrics.
 
-- Document the assembly approaches considered for the project.
-- Compare assembly contiguity, assembly size, and completeness using metrics from actual output reports.
-- Make analysis figures reproducible from a clearly documented input table.
-- Preserve the distinction between planned workflows and steps/results confirmed to have been run.
+## Project accomplishment
+
+- Worked on the *A. lagopoides* genome assembly through the **contig-level assembly stage**.
+- Documented short-read, long-read, and hybrid assembly strategies relevant to the project.
+- Identified assembly-quality measures used to evaluate draft assemblies, including contiguity, total assembly length, contig count, and BUSCO completeness where available.
+- Prepared code to generate reproducible assembly comparison plots from measured metrics.
+
+**Scope statement:** The confirmed project milestone stated here is contig-level assembly. This README does not claim chromosome-level assembly, scaffolding, gap closure, or any specific N50, genome size, BUSCO score, or contig count without values traceable to the original reports.
 
 ## Assembly strategies documented
 
-### 1. Hybrid assembly
+### Hybrid assembly
 
-Combines long-read and Illumina short-read data. The repository documents MaSuRCA as the hybrid assembler considered for this workflow.
+Combines long-read and Illumina short-read data. The repository documents MaSuRCA as a hybrid assembler considered for this workflow.
 
-**Inputs:** long-read FASTQ data and paired-end short-read FASTQ files.  
-**Quality assessment:** QUAST and BUSCO, where suitable reference lineages and inputs are available.
+### Long-read assembly
 
-### 2. Long-read assembly
+Long reads can help span repetitive regions. The existing pipeline-diagram script lists HiFiASM, WTDBG2, and Flye as candidate assemblers. Tool choice depends on the actual sequencing technology and read type.
 
-Uses long reads to help span repetitive regions. The existing pipeline-diagram script lists HiFiASM, WTDBG2, and Flye as possible assemblers; the correct choice depends on the sequencing technology and read type. For example, HiFiASM is intended for PacBio HiFi reads, while Flye supports several long-read types.
+### Short-read assembly
 
-**Quality assessment:** read-level QC (for example, NanoPlot/NanoStats) and assembly-level assessment with QUAST and BUSCO where applicable.
+Uses paired-end short reads. The existing notes list Velvet and SPAdes as candidate assemblers. These are alternative approaches, not necessarily sequential steps.
 
-### 3. Short-read assembly
-
-Uses paired-end short reads. The existing notes list Velvet and SPAdes as possible assemblers. These are alternative workflows, not necessarily sequential steps.
-
-**Quality assessment:** FastQC before/after trimming as appropriate, a short-read trimming tool such as fastp, and assembly assessment with QUAST and BUSCO.
-
-> Tool selection should match the actual input technology and project protocol. The README describes candidate workflows; it does not claim that every listed assembler or polishing step was run.
+> These sections document strategies and tools; they do not imply that every listed assembler or polishing step was used for the final assembly. Cite the actual tool/version and commands used when adding detailed methods.
 
 ## Assembly quality metrics
 
 | Metric | What it tells you | Interpretation |
 |---|---|---|
-| Total assembly length | Sum of assembled sequence lengths | Compare with an independently justified genome-size estimate; larger is not automatically better |
-| Contig N50 | Length at which contigs of that length or longer account for at least half of the assembly | Higher values generally indicate greater contiguity |
-| Number of contigs | Degree of fragmentation | Fewer contigs can indicate greater contiguity, but should be considered with other metrics |
-| BUSCO completeness | Recovery of expected conserved single-copy orthologs | Report complete, single-copy, duplicated, fragmented, and missing categories where available |
-| GC content | Fraction of G/C bases | Useful descriptive metric; unexpected values can indicate contamination or unusual sequence composition |
+| Total assembly length | Sum of assembled sequence lengths | Compare with an independently justified genome-size estimate |
+| Contig N50 | Contig length at which contigs of that length or longer make up at least half of the assembly | Higher values generally indicate greater contiguity |
+| Number of contigs | Degree of fragmentation | Interpret alongside N50, assembly length, and completeness |
+| BUSCO completeness | Recovery of expected conserved orthologs | Report complete, single-copy, duplicated, fragmented, and missing categories when available |
+| GC content | Fraction of G/C bases | Useful descriptive measure and possible contamination signal |
 
-Do not compare metrics across assemblies unless they were calculated consistently. Report the exact software, version, parameters, and input files.
+Metrics should be calculated consistently and reported with software versions, parameters, and input provenance.
 
 ## Repository contents
 
-- `README.md` — project overview and reproducibility guidance.
+- `README.md` — project scope, methods overview, and reproducibility notes.
 - `Siba poster 16.02.2025 final edited.pdf` — project poster.
-- `out_lay` — Python/Graphviz script that generates long-read, short-read, and hybrid pipeline diagrams.
-- `plot_assembly` — Python plotting script that reads a metrics CSV and generates comparison plots.
+- `out_lay` — Python/Graphviz script for long-read, short-read, and hybrid pipeline diagrams.
+- `plot_assembly` — Python script that plots metrics from a user-supplied CSV.
+- `assembly_metrics_template.csv` — blank template for entering measured assembly metrics.
 
-## Reproduce the assembly comparison plot
+## Generate comparison plots from real metrics
 
-Requirements: Python 3, pandas, and matplotlib.
-
-Install dependencies:
+Install requirements:
 
 ```bash
 python -m pip install pandas matplotlib
 ```
 
-Create a CSV file named `assembly_metrics.csv` using this schema (one row per assembly):
-
-```csv
-assembly_method,total_length_bp,n50_bp,contig_count,busco_complete_percent
-Hybrid,,
-Long-read,,
-Short-read,,
-```
-
-Replace the blank cells with values taken from the corresponding assembly reports. Leave BUSCO values blank if unavailable. Do not use invented or placeholder values in a final figure.
+Copy `assembly_metrics_template.csv` to `assembly_metrics.csv`, then fill in values from the actual assembly reports. Do not use estimates or illustrative values as observed results. Leave unavailable metrics blank.
 
 Run:
 
@@ -80,29 +67,22 @@ Run:
 python plot_assembly assembly_metrics.csv --outdir figures
 ```
 
-The script validates the input and writes one PNG per metric to `figures/`. Missing values are omitted from that metric's plot.
+The script generates a separate PNG for each metric that has numeric values.
 
-## Recommended results checklist
+## Recommended reporting checklist
 
-Before presenting a final comparison, record:
+- [ ] Record sequencing dataset/source and technology.
+- [ ] Record assembler name, version, parameters, and commands actually used.
+- [ ] Preserve the final contig FASTA and its provenance.
+- [ ] Record total assembly length, N50, contig count, and other values from the actual reports.
+- [ ] Add QUAST and, where appropriate, BUSCO reports and lineage/version.
+- [ ] Generate plots from the measured metrics table.
+- [ ] Describe limitations, including possible contamination, heterozygosity, repeats, and differences between input datasets.
 
-- [ ] Source/accession and sequencing technology for each read set
-- [ ] Read QC and trimming reports, if trimming was performed
-- [ ] Assembler names, versions, parameters, and commands
-- [ ] Assembly FASTA file provenance
-- [ ] QUAST report and BUSCO lineage/version and summary
-- [ ] Assembly metrics table populated from actual outputs
-- [ ] Figures generated from that table
-- [ ] Limitations, including possible contamination, heterozygosity, repeats, and differences in input data
+## Interpretation and limitations
 
-## Scientific interpretation
+Reaching contig level is a meaningful draft genome assembly milestone, but it does not by itself establish chromosome-level completeness or validate assembly accuracy. Hybrid assembly may improve contiguity or accuracy in some datasets; any claim that one strategy performed best must be supported by comparable project-specific results.
 
-A hybrid approach may improve the balance between contiguity and base-level accuracy in some projects, but this must be demonstrated using the project's own results. Do not claim that one method is best until the same quality metrics have been calculated and compared fairly.
+## Data provenance and citation
 
-## Limitations
-
-This repository is a project record and workflow documentation. A pipeline description or diagram alone does not prove that a workflow ran successfully. Numerical results should only be reported when traceable to the original assembler, QUAST, BUSCO, or other QC outputs.
-
-## Citation and data provenance
-
-When publishing or reusing the analysis, cite the source of each read dataset and the software used. Add accession IDs, software versions, and the project publication or poster citation here once verified.
+When sharing or publishing this work, cite the read dataset(s), software, and project poster/publication as appropriate. Add accession identifiers, software versions, and verified assembly statistics when these are available from the original records.
