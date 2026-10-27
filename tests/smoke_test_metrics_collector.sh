@@ -3,9 +3,9 @@ set -Eeuo pipefail
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# printf interprets \\t as actual tab characters; QUAST report.tsv is tab-delimited.
-printf 'Assembly\\tHybrid\\tLong-read\\n# contigs\\t120\\t95\\nTotal length\\t410000000\\t405000000\\nN50\\t180000\\t150000\\n' > "$tmp/report.tsv"
-printf 'C:94.2%%[S:90.0%%,D:4.2%%],F:2.1%%,M:3.7%%,n:1614\\n' > "$tmp/busco.txt"
+# printf interprets backslash-t as actual tab characters for QUAST's TSV format.
+printf 'Assembly\tHybrid\tLong-read\n# contigs\t120\t95\nTotal length\t410000000\t405000000\nN50\t180000\t150000\n' > "$tmp/report.tsv"
+printf 'C:94.2%%[S:90.0%%,D:4.2%%],F:2.1%%,M:3.7%%,n:1614\n' > "$tmp/busco.txt"
 
 python collect_assembly_metrics.py --quast "$tmp/report.tsv" --out "$tmp/metrics.csv" --busco "Hybrid=$tmp/busco.txt"
 
