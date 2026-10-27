@@ -1,103 +1,108 @@
-# AL-genome-assembly-
-aeluropus lagopoides full genome assembly 
-# Genome Assembly Pipelines
+# *Aeluropus lagopoides* Genome Assembly
 
-This repository contains descriptions of different genome assembly pipelines.
+A reproducible project documenting genome assembly strategies for *Aeluropus lagopoides*, a salt-tolerant grass. The repository currently contains a project poster, pipeline-diagram code, an assembly-comparison plotting script, and notes on short-read, long-read, and hybrid assembly workflows.
 
-## 1. Comparison of Different Genome Assemblies
+> **Reproducibility note:** The repository's plotting script previously contained illustrative example values. Those values are not verified project results and must not be interpreted as measurements from the *A. lagopoides* assembly. The updated script reads a user-supplied metrics table instead.
 
-*(Include the information and image from the first document here)*
+## Project goals
 
-**Figure 3**: Comparison between different genome assembly methods based on key quality metrics:
+- Document the assembly approaches considered for the project.
+- Compare assembly contiguity, assembly size, and completeness using metrics from actual output reports.
+- Make analysis figures reproducible from a clearly documented input table.
+- Preserve the distinction between planned workflows and steps/results confirmed to have been run.
 
-* **N50 (blue)**: Measures assembly contiguity; higher values indicate better assemblies.
-* **Genome Size (green)**: Estimated genome size in megabases (Mb) for each assembly approach.
-* **BUSCO Score (orange)**: Assesses genome completeness based on conserved orthologs; higher scores suggest better assemblies.
-* **Contigs (red)**: Represents genome fragmentation; fewer contigs indicate a more contiguous assembly.
+## Assembly strategies documented
 
-**Three assembly strategies are evaluated:**
+### 1. Hybrid assembly
 
-* **Hybrid (MaSuRCA)**: Combines short and long reads for improved accuracy.
-* **Long Reads (WTDBG2)**: Uses only long-read sequencing for assembly.
-* **Short Reads (Velvet)**: Uses only short-read sequencing, resulting in highly fragmented assemblies.
+Combines long-read and Illumina short-read data. The repository documents MaSuRCA as the hybrid assembler considered for this workflow.
 
-**Key Observations:**
+**Inputs:** long-read FASTQ data and paired-end short-read FASTQ files.  
+**Quality assessment:** QUAST and BUSCO, where suitable reference lineages and inputs are available.
 
-This comparison highlights that **hybrid assembly** provides the best balance between contiguity, completeness, and genome size accuracy.
+### 2. Long-read assembly
 
-## 2. Genome Assembly Pipelines
+Uses long reads to help span repetitive regions. The existing pipeline-diagram script lists HiFiASM, WTDBG2, and Flye as possible assemblers; the correct choice depends on the sequencing technology and read type. For example, HiFiASM is intended for PacBio HiFi reads, while Flye supports several long-read types.
 
-*(Include the pipeline descriptions from the second document here)*
+**Quality assessment:** read-level QC (for example, NanoPlot/NanoStats) and assembly-level assessment with QUAST and BUSCO where applicable.
 
-Here's a breakdown of the pipelines:
+### 3. Short-read assembly
 
-### 2.1. De Novo Assembly Pipeline Using Long Read Sequences
+Uses paired-end short reads. The existing notes list Velvet and SPAdes as possible assemblers. These are alternative workflows, not necessarily sequential steps.
 
-* **Description:** This pipeline uses long-read sequencing data (like PacBio) to create a genome assembly.  Long reads are advantageous because they can span repetitive regions, which simplifies the assembly process.
+**Quality assessment:** FastQC before/after trimming as appropriate, a short-read trimming tool such as fastp, and assembly assessment with QUAST and BUSCO.
 
-* **Steps:**
+> Tool selection should match the actual input technology and project protocol. The README describes candidate workflows; it does not claim that every listed assembler or polishing step was run.
 
-    1.  **Long Read Data:** Input is raw long-read sequence data.
-    2.  **CCS File (BAM to Fastq):** If the long reads are in BAM format...
-    3.  **NanoStats:** Quality assessment of the long reads.
-    4.  **Assembler:** The assembly process.
-    5.  **BUSCO and QUAST:** Quality assessment of the final genome assembly.
+## Assembly quality metrics
 
-* **Code-like Representation:**
+| Metric | What it tells you | Interpretation |
+|---|---|---|
+| Total assembly length | Sum of assembled sequence lengths | Compare with an independently justified genome-size estimate; larger is not automatically better |
+| Contig N50 | Length at which contigs of that length or longer account for at least half of the assembly | Higher values generally indicate greater contiguity |
+| Number of contigs | Degree of fragmentation | Fewer contigs can indicate greater contiguity, but should be considered with other metrics |
+| BUSCO completeness | Recovery of expected conserved single-copy orthologs | Report complete, single-copy, duplicated, fragmented, and missing categories where available |
+| GC content | Fraction of G/C bases | Useful descriptive metric; unexpected values can indicate contamination or unusual sequence composition |
 
-    ```
-    long_reads = "input.bam"
-    if file_format(long_reads) == "bam":
-        fastq_reads = samtools_bam_to_fastq(long_reads)
-    else:
-        fastq_reads = long_reads
-    nano_stats_report = nanoplot(fastq_reads)
-    assembly = hifiasm(fastq_reads) # or wtdbg2(fastq_reads) or flye(fastq_reads)
-    busco_report = busco(assembly)
-    quast_report = quast(assembly)
-    ```
+Do not compare metrics across assemblies unless they were calculated consistently. Report the exact software, version, parameters, and input files.
 
-### 2.2. De Novo Assembly Pipeline Using Short Read Sequences and Polished Assembly for Validation
+## Repository contents
 
-* **Description:** This pipeline uses short-read sequencing data...
+- `README.md` — project overview and reproducibility guidance.
+- `Siba poster 16.02.2025 final edited.pdf` — project poster.
+- `out_lay` — Python/Graphviz script that generates long-read, short-read, and hybrid pipeline diagrams.
+- `plot_assembly` — Python plotting script that reads a metrics CSV and generates comparison plots.
 
-* **Steps:**
-     1. **Short read data**
-     2. **FastQC**
-     3. **Fastp**
-     4. **Assembler**
-     5. **Polished assembly (flye long + short reads)**
-     6. **Pilon for polished assembly**
-     7. **QC check**
-     8.  **BUSCO and QUAST**
-* **Code-like Representation:**
+## Reproduce the assembly comparison plot
 
-    ```
-    short_reads_1 = "reads1.fastq"
-    short_reads_2 = "reads2.fastq"
-    fastqc_report = fastqc([short_reads_1, short_reads_2])
-    trimmed_reads_1, trimmed_reads_2 = fastp([short_reads_1, short_reads_2])
-    assembly = spades([trimmed_reads_1, trimmed_reads_2])
-    polished_assembly = pilon(assembly, trimmed_reads_1, trimmed_reads_2)
-    qc_check(polished_assembly)
-    busco_report = busco(polished_assembly)
-    quast_report = quast(polished_assembly)
-    ```
+Requirements: Python 3, pandas, and matplotlib.
 
-### 2.3. Pipeline for Making Hybrid Assembly (Long Reads + Short Reads)
+Install dependencies:
 
- * **Description**: This pipeline combines long-read and short-read data.
- * **Steps**:
-     1. **Long reads (PacBio)**
-     2. **Short reads (Illumina)**
-     3. **Assembler (MaSuRCA)**
-     4.  **BUSCO and QUAST**
- * **Code-like Representation:**
+```bash
+python -m pip install pandas matplotlib
+```
 
-     ```
-     long_reads = "pacbio_reads.fastq"
-     short_reads_1 = "illumina_reads_1.fastq"
-     short_reads_2 = "illumina_reads_2.fastq"
-     assembly = masurca(long_reads, short_reads_1, short_reads_2)
-     busco_report = busco(assembly)
-     quast_report = quast(assembly)
+Create a CSV file named `assembly_metrics.csv` using this schema (one row per assembly):
+
+```csv
+assembly_method,total_length_bp,n50_bp,contig_count,busco_complete_percent
+Hybrid,,
+Long-read,,
+Short-read,,
+```
+
+Replace the blank cells with values taken from the corresponding assembly reports. Leave BUSCO values blank if unavailable. Do not use invented or placeholder values in a final figure.
+
+Run:
+
+```bash
+python plot_assembly assembly_metrics.csv --outdir figures
+```
+
+The script validates the input and writes one PNG per metric to `figures/`. Missing values are omitted from that metric's plot.
+
+## Recommended results checklist
+
+Before presenting a final comparison, record:
+
+- [ ] Source/accession and sequencing technology for each read set
+- [ ] Read QC and trimming reports, if trimming was performed
+- [ ] Assembler names, versions, parameters, and commands
+- [ ] Assembly FASTA file provenance
+- [ ] QUAST report and BUSCO lineage/version and summary
+- [ ] Assembly metrics table populated from actual outputs
+- [ ] Figures generated from that table
+- [ ] Limitations, including possible contamination, heterozygosity, repeats, and differences in input data
+
+## Scientific interpretation
+
+A hybrid approach may improve the balance between contiguity and base-level accuracy in some projects, but this must be demonstrated using the project's own results. Do not claim that one method is best until the same quality metrics have been calculated and compared fairly.
+
+## Limitations
+
+This repository is a project record and workflow documentation. A pipeline description or diagram alone does not prove that a workflow ran successfully. Numerical results should only be reported when traceable to the original assembler, QUAST, BUSCO, or other QC outputs.
+
+## Citation and data provenance
+
+When publishing or reusing the analysis, cite the source of each read dataset and the software used. Add accession IDs, software versions, and the project publication or poster citation here once verified.
