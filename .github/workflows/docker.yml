@@ -5,18 +5,24 @@ on:
     branches: [main]
     paths:
       - "Dockerfile"
+      - "Dockerfile.assembly"
       - "requirements.txt"
       - "plot_assembly"
       - "out_lay"
       - "assembly_metrics_template.csv"
+      - "tests/**"
+      - "ASSEMBLY_DOCKER.md"
       - ".github/workflows/docker.yml"
   pull_request:
     paths:
       - "Dockerfile"
+      - "Dockerfile.assembly"
       - "requirements.txt"
       - "plot_assembly"
       - "out_lay"
       - "assembly_metrics_template.csv"
+      - "tests/**"
+      - "ASSEMBLY_DOCKER.md"
       - ".github/workflows/docker.yml"
   workflow_dispatch:
 
@@ -24,12 +30,24 @@ permissions:
   contents: read
 
 jobs:
-  docker-build:
+  plotting-image:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Build container image
+      - name: Build plotting container
         run: docker build --tag al-genome-assembly:ci .
-      - name: Check plotting CLI inside container
+      - name: Check plotting CLI
         run: docker run --rm al-genome-assembly:ci --help
+      - name: Test plots using synthetic metrics
+        run: bash tests/smoke_test_plotting.sh al-genome-assembly:ci
+
+  assembly-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build MaSuRCA assembly container
+        run: docker build -f Dockerfile.assembly --tag al-genome-assembly:assembly-ci .
+      - name: Check MaSuRCA command is available
+        run: docker run --rm --entrypoint bash al-genome-assembly:assembly-ci -lc 'masurca --help'
