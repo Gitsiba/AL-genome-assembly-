@@ -12,6 +12,7 @@ on:
       - "assembly_metrics_template.csv"
       - "tests/**"
       - "ASSEMBLY_DOCKER.md"
+      - "hpc/**"
       - ".github/workflows/docker.yml"
   pull_request:
     paths:
