@@ -5,23 +5,28 @@
 
 # TEMPLATE ONLY — do not submit until an HPC administrator confirms resources
 # and container support. Add valid #SBATCH directives for the CV Raman policy,
-# for example CPU, memory, and wall time. Values are intentionally not guessed.
+# including CPU, memory, and wall time. Values are intentionally not guessed.
 #
 # Safe default: this script performs preflight checks and exits.
 # To launch an assembly only after review, export RUN_ASSEMBLY=YES in your job
 # environment and set all variables below to real paths.
+#
+# IMPORTANT: keep config.txt and input reads under PROJECT_DIR so they are
+# available inside the container at /work. If your cluster stores reads elsewhere,
+# ask the HPC administrator how to bind those data paths safely.
 
 set -Eeuo pipefail
 
 : "${PROJECT_DIR:?Set PROJECT_DIR to the project directory visible on the compute node}"
 : "${CONTAINER_IMAGE:?Set CONTAINER_IMAGE to the accessible .sif image path}"
-: "${MASURCA_CONFIG:?Set MASURCA_CONFIG to the project-specific MaSuRCA config.txt path}"
+: "${MASURCA_CONFIG:?Set MASURCA_CONFIG to config.txt inside PROJECT_DIR}"
 
 CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-apptainer}"
 RUN_ASSEMBLY="${RUN_ASSEMBLY:-NO}"
 
 mkdir -p "${PROJECT_DIR}/logs"
-cd "${PROJECT_DIR}"
+PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+cd "$PROJECT_DIR"
 
 case "$CONTAINER_RUNTIME" in
   apptainer|singularity) ;;
@@ -44,15 +49,24 @@ if [[ ! -r "$MASURCA_CONFIG" ]]; then
   exit 2
 fi
 
+CONFIG_ABS="$(cd "$(dirname "$MASURCA_CONFIG")" && pwd)/$(basename "$MASURCA_CONFIG")"
+case "$CONFIG_ABS" in
+  "$PROJECT_DIR"/*) CONFIG_IN_CONTAINER="/work/${CONFIG_ABS#"$PROJECT_DIR"/}" ;;
+  *)
+    echo "ERROR: MASURCA_CONFIG must be located inside PROJECT_DIR for this template." >&2
+    exit 2
+    ;;
+esac
+
 echo "Host: $(hostname)"
 echo "Project directory: $PROJECT_DIR"
 echo "Container image: $CONTAINER_IMAGE"
-echo "MaSuRCA config: $MASURCA_CONFIG"
+echo "MaSuRCA config: $CONFIG_IN_CONTAINER"
 echo "Slurm job ID: ${SLURM_JOB_ID:-not submitted through Slurm}"
 echo "Container runtime: $CONTAINER_RUNTIME"
 echo "Preflight only unless RUN_ASSEMBLY=YES."
 
-"$CONTAINER_RUNTIME" exec "$CONTAINER_IMAGE" masurca --help
+"$CONTAINER_RUNTIME" exec --bind "$PROJECT_DIR:/work" "$CONTAINER_IMAGE" masurca --help
 
 if [[ "$RUN_ASSEMBLY" != "YES" ]]; then
   echo "Preflight succeeded. No assembly was launched."
@@ -61,13 +75,13 @@ fi
 
 echo "RUN_ASSEMBLY=YES: generating MaSuRCA assembly script."
 "$CONTAINER_RUNTIME" exec --bind "$PROJECT_DIR:/work" "$CONTAINER_IMAGE" \
-  sh -lc 'cd /work && masurca "$1"' sh "$MASURCA_CONFIG"
+  sh -lc 'cd /work && masurca "$1"' sh "$CONFIG_IN_CONTAINER"
 
 if [[ ! -s "$PROJECT_DIR/assemble.sh" ]]; then
-  echo "ERROR: MaSuRCA did not create /work/assemble.sh. Check config and bind paths." >&2
+  echo "ERROR: MaSuRCA did not create assemble.sh. Check config and read paths." >&2
   exit 1
 fi
 
-echo "Starting assembly.sh. Ensure the config and read paths are valid inside /work."
+echo "Starting assemble.sh. Confirm config read paths are valid inside /work."
 "$CONTAINER_RUNTIME" exec --bind "$PROJECT_DIR:/work" "$CONTAINER_IMAGE" \
   bash -lc 'cd /work && bash assemble.sh'
