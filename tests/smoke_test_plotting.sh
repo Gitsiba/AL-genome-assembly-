@@ -3,7 +3,9 @@ set -euo pipefail
 
 IMAGE="${1:-al-genome-assembly:ci}"
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+# Files created by the container may be owned by root on the bind mount.
+# Restore owner permissions before removing the temporary directory.
+trap 'chmod -R u+rwX "$TMP_DIR" 2>/dev/null || true; rm -rf "$TMP_DIR"' EXIT
 
 cat > "$TMP_DIR/test_metrics.csv" <<'CSV'
 assembly_method,total_length_bp,n50_bp,contig_count,busco_complete_percent
