@@ -1,27 +1,85 @@
+#!/usr/bin/env python3
+"""Plot genome-assembly metrics from a user-supplied CSV.
+
+Expected columns:
+  assembly_method,total_length_bp,n50_bp,contig_count,busco_complete_percent
+
+Use actual values from assembly reports. Blank cells are allowed and omitted from
+that metric's plot; illustrative/example values are deliberately not embedded.
+"""
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Sample data (replace with your actual data)
-data = {
-    'Assembly Method': ['Hybrid', 'Long Reads', 'Short Reads', 'Hybrid', 'Long Reads', 'Short Reads', 'Hybrid', 'Long Reads', 'Short Reads', 'Hybrid', 'Long Reads', 'Short Reads'],
-    'Metric': ['N50', 'N50', 'N50', 'Genome Size', 'Genome Size', 'Genome Size', 'BUSCO Score', 'BUSCO Score', 'BUSCO Score', 'Contigs', 'Contigs', 'Contigs'],
-    'Value': [9e+05, 6e+05, 1e+05, 400, 380, 350, 80, 70, 50, 10000, 12000, 150000]  # Example values
+METRICS = {
+    "total_length_bp": ("Total assembly length (bp)", "assembly_total_length.png"),
+    "n50_bp": ("Contig N50 (bp)", "assembly_n50.png"),
+    "contig_count": ("Number of contigs", "assembly_contig_count.png"),
+    "busco_complete_percent": ("BUSCO complete (%)", "assembly_busco_complete.png"),
 }
-df = pd.DataFrame(data)
+REQUIRED_COLUMNS = {"assembly_method", *METRICS.keys()}
 
-# Create the grouped bar chart
-fig, ax = plt.subplots(figsize=(10, 6))  # Adjust figure size as needed
-df.pivot(index='Assembly Method', columns='Metric', values='Value').plot(kind='bar', ax=ax)
 
-# Add labels and title
-ax.set_xlabel('Assembly Method')
-ax.set_ylabel('Value')
-ax.set_title('Comparison of Genome Assembly Methods')
-plt.xticks(rotation=45)  # Rotate x-axis labels for readability
-plt.legend(title='Metric')  # Add a legend
-plt.tight_layout()  # Adjust layout to prevent labels from overlapping
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("metrics_csv", help="CSV containing measured assembly metrics")
+    parser.add_argument("--outdir", default="figures", help="Directory for PNG plots")
+    args = parser.parse_args()
 
-# Show the plot
-plt.show()
-# To save the plot
-# plt.savefig('assembly_comparison.png')
+    input_path = Path(args.metrics_csv)
+    if not input_path.is_file():
+        parser.error(f"Input CSV does not exist: {input_path}")
+
+    df = pd.read_csv(input_path)
+    missing = sorted(REQUIRED_COLUMNS - set(df.columns))
+    if missing:
+        parser.error("CSV is missing required column(s): " + ", ".join(missing))
+    if df.empty:
+        parser.error("Input CSV has no assembly rows.")
+    if df["assembly_method"].isna().any():
+        parser.error("Every row must have an assembly_method label.")
+    df["assembly_method"] = df["assembly_method"].astype(str)
+
+    for column in METRICS:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+    if df[list(METRICS)].notna().sum().sum() == 0:
+        parser.error("No numeric metric values found; fill the CSV from real assembly reports.")
+
+    outdir = Path(args.outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    plots_written = 0
+
+    for column, (ylabel, filename) in METRICS.items():
+        subset = df[["assembly_method", column]].dropna()
+        if subset.empty:
+            print(f"Skipping {column}: no values supplied.")
+            continue
+        if (subset[column] < 0).any():
+            parser.error(f"{column} cannot contain negative values.")
+        if column == "busco_complete_percent" and (subset[column] > 100).any():
+            parser.error("busco_complete_percent must be between 0 and 100.")
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.bar(subset["assembly_method"], subset[column])
+        ax.set_xlabel("Assembly method")
+        ax.set_ylabel(ylabel)
+        ax.set_title(ylabel + " by assembly method")
+        ax.tick_params(axis="x", labelrotation=25)
+        fig.tight_layout()
+        output_path = outdir / filename
+        fig.savefig(output_path, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Wrote {output_path}")
+        plots_written += 1
+
+    if plots_written == 0:
+        parser.error("No plots were produced; provide at least one metric with numeric values.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
