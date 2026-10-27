@@ -98,6 +98,27 @@ docker run --rm --entrypoint python \
 - `.dockerignore` — excludes Git metadata, caches, and common large sequencing files from the build context.
 - `.github/workflows/docker.yml` — builds the image and checks the plotting CLI on pushes and pull requests.
 
+## Rebuild the metrics table from actual reports
+
+After you have run QUAST on each real assembly FASTA, use the generated `report.tsv` file to extract assembly length, N50, and contig count. BUSCO is optional; pass the corresponding `short_summary` file for each assembly whose BUSCO results are available.
+
+```bash
+python collect_assembly_metrics.py \
+  --quast quast_hybrid/report.tsv \
+  --busco "Hybrid=busco_hybrid/short_summary.specific.lineage.txt" \
+  --out assembly_metrics.csv
+```
+
+For multiple assemblies, provide one `--busco "LABEL=FILE"` argument per BUSCO report. The labels must match the assembly column names in QUAST's `report.tsv`. The collector only extracts existing report values; it does not run QUAST or BUSCO and does not fill missing metrics with estimates. Inspect the CSV against the source reports before plotting or publication.
+
+Run the collector's synthetic-data test with:
+
+```bash
+bash tests/smoke_test_metrics_collector.sh
+```
+
+The test uses invented values solely to test software behavior. They are not biological results and must not be reported as *A. lagopoides* metrics.
+
 ## Assembly quality metrics
 
 | Metric | What it tells you | Interpretation |
@@ -116,10 +137,12 @@ Metrics should be calculated consistently and reported with software versions, p
 - `Siba poster 16.02.2025 final edited.pdf` — project poster.
 - `out_lay` — Python/Graphviz script for long-read, short-read, and hybrid pipeline diagrams.
 - `plot_assembly` — Python script that plots metrics from a user-supplied CSV.
+- `collect_assembly_metrics.py` — extracts metrics from actual QUAST and optional BUSCO reports into the plotting CSV format.
 - `assembly_metrics_template.csv` — blank template for entering measured assembly metrics.
 - `Dockerfile`, `requirements.txt`, `.dockerignore` — plotting container setup.
 - `Dockerfile.assembly` and `ASSEMBLY_DOCKER.md` — separate MaSuRCA assembly environment and cautious run instructions.
 - `tests/smoke_test_plotting.sh` — synthetic-data smoke test that verifies the four metric plots are produced.
+- `tests/smoke_test_metrics_collector.sh` — synthetic-data test for QUAST/BUSCO report extraction.
 - `.github/workflows/docker.yml` — automated build and smoke tests for the plotting image, plus a MaSuRCA image build and command check.
 
 ## Run plotting without Docker
