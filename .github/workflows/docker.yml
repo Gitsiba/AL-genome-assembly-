@@ -38,7 +38,7 @@ jobs:
       - name: Build plotting container
         run: docker build --tag al-genome-assembly:ci .
       - name: Check plotting CLI
-        run: docker run --rm al-genome-assembly:ci --help
+        run: docker run --rm --user "$(id -u):$(id -g)" al-genome-assembly:ci --help
       - name: Test plots using synthetic metrics
         run: bash tests/smoke_test_plotting.sh al-genome-assembly:ci
 
@@ -50,4 +50,4 @@ jobs:
       - name: Build MaSuRCA assembly container
         run: docker build -f Dockerfile.assembly --tag al-genome-assembly:assembly-ci .
       - name: Check MaSuRCA command is available
-        run: docker run --rm --entrypoint bash al-genome-assembly:assembly-ci -lc 'masurca --help'
+        run: docker run --rm --entrypoint micromamba al-genome-assembly:assembly-ci run -n base masurca --help
