@@ -73,6 +73,14 @@ docker run --rm \
 
 The output files will appear in the local `figures/` directory. Blank metrics are skipped; at least one actual numeric metric is required. Do not use example or invented values as observed results.
 
+### Run the synthetic plotting smoke test
+
+This uses clearly labelled synthetic metrics and verifies that the expected PNG files are generated. It is a software test only; these values are not *A. lagopoides* results.
+
+```bash
+bash tests/smoke_test_plotting.sh al-genome-assembly:plot
+```
+
 ### Generate pipeline diagrams
 
 The `out_lay` script uses Graphviz and is included in the image. Run it with the repository mounted so the PNG diagrams are saved into the working directory:
@@ -111,7 +119,8 @@ Metrics should be calculated consistently and reported with software versions, p
 - `assembly_metrics_template.csv` — blank template for entering measured assembly metrics.
 - `Dockerfile`, `requirements.txt`, `.dockerignore` — plotting container setup.
 - `Dockerfile.assembly` and `ASSEMBLY_DOCKER.md` — separate MaSuRCA assembly environment and cautious run instructions.
-- `.github/workflows/docker.yml` — automated check for the lightweight plotting image.
+- `tests/smoke_test_plotting.sh` — synthetic-data smoke test that verifies the four metric plots are produced.
+- `.github/workflows/docker.yml` — automated build and smoke tests for the plotting image, plus a MaSuRCA image build and command check.
 
 ## Run plotting without Docker
 
