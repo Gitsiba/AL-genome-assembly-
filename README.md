@@ -33,7 +33,12 @@ Uses paired-end short reads. The existing notes list Velvet and SPAdes as candid
 
 ## Docker implementation
 
-Docker packages the Python plotting dependencies and Graphviz so these helper scripts can run in a consistent environment. **This image currently containerizes plotting and pipeline-diagram utilities; it does not install or run the large genome assembly tools themselves (such as MaSuRCA, Flye, SPAdes, or BUSCO).**
+The repository now has two separate container paths:
+
+- **Plotting image** (`Dockerfile`): Python plotting dependencies and Graphviz for metric plots and pipeline diagrams.
+- **Assembly image** (`Dockerfile.assembly`): a separate MaSuRCA 4.1.0 environment intended for a hybrid contig-assembly attempt using the actual PacBio HiFi and Illumina inputs.
+
+The assembly image and instructions are a starting point and have not been verified against the original historical run or the user's dataset. See [ASSEMBLY_DOCKER.md](ASSEMBLY_DOCKER.md) for input preparation, configuration, execution, and validation steps. Do not claim a successful assembly until the image builds and the workflow completes with the real inputs.
 
 ### Build the image
 
@@ -104,8 +109,9 @@ Metrics should be calculated consistently and reported with software versions, p
 - `out_lay` — Python/Graphviz script for long-read, short-read, and hybrid pipeline diagrams.
 - `plot_assembly` — Python script that plots metrics from a user-supplied CSV.
 - `assembly_metrics_template.csv` — blank template for entering measured assembly metrics.
-- `Dockerfile`, `requirements.txt`, `.dockerignore` — reproducible container setup.
-- `.github/workflows/docker.yml` — automated Docker build check.
+- `Dockerfile`, `requirements.txt`, `.dockerignore` — plotting container setup.
+- `Dockerfile.assembly` and `ASSEMBLY_DOCKER.md` — separate MaSuRCA assembly environment and cautious run instructions.
+- `.github/workflows/docker.yml` — automated check for the lightweight plotting image.
 
 ## Run plotting without Docker
 
