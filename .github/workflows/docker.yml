@@ -8,6 +8,7 @@ on:
       - "Dockerfile.assembly"
       - "requirements.txt"
       - "plot_assembly"
+      - "collect_assembly_metrics.py"
       - "out_lay"
       - "assembly_metrics_template.csv"
       - "tests/**"
@@ -42,6 +43,8 @@ jobs:
         run: docker run --rm --user "$(id -u):$(id -g)" al-genome-assembly:ci --help
       - name: Test plots using synthetic metrics
         run: bash tests/smoke_test_plotting.sh al-genome-assembly:ci
+      - name: Test QUAST/BUSCO metrics collector
+        run: bash tests/smoke_test_metrics_collector.sh
 
   assembly-image:
     runs-on: ubuntu-latest
