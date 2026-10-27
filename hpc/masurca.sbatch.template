@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=al-masurca
+#SBATCH --output=logs/al-masurca-%j.out
+#SBATCH --error=logs/al-masurca-%j.err
+
+# TEMPLATE ONLY — do not submit until an HPC administrator confirms resources
+# and container support. Add valid #SBATCH directives for the CV Raman policy,
+# for example CPU, memory, and wall time. Values are intentionally not guessed.
+#
+# Safe default: this script performs preflight checks and exits.
+# To launch an assembly only after review, export RUN_ASSEMBLY=YES in your job
+# environment and set all variables below to real paths.
+
+set -Eeuo pipefail
+
+: "${PROJECT_DIR:?Set PROJECT_DIR to the project directory visible on the compute node}"
+: "${CONTAINER_IMAGE:?Set CONTAINER_IMAGE to the accessible .sif image path}"
+: "${MASURCA_CONFIG:?Set MASURCA_CONFIG to the project-specific MaSuRCA config.txt path}"
+
+CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-apptainer}"
+RUN_ASSEMBLY="${RUN_ASSEMBLY:-NO}"
+
+mkdir -p "${PROJECT_DIR}/logs"
+cd "${PROJECT_DIR}"
+
+case "$CONTAINER_RUNTIME" in
+  apptainer|singularity) ;;
+  *)
+    echo "ERROR: CONTAINER_RUNTIME must be apptainer or singularity." >&2
+    exit 2
+    ;;
+esac
+
+if ! command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1; then
+  echo "ERROR: $CONTAINER_RUNTIME is not on PATH. Check CV Raman modules/policy." >&2
+  exit 2
+fi
+if [[ ! -r "$CONTAINER_IMAGE" ]]; then
+  echo "ERROR: container image is not readable: $CONTAINER_IMAGE" >&2
+  exit 2
+fi
+if [[ ! -r "$MASURCA_CONFIG" ]]; then
+  echo "ERROR: MaSuRCA config is not readable: $MASURCA_CONFIG" >&2
+  exit 2
+fi
+
+echo "Host: $(hostname)"
+echo "Project directory: $PROJECT_DIR"
+echo "Container image: $CONTAINER_IMAGE"
+echo "MaSuRCA config: $MASURCA_CONFIG"
+echo "Slurm job ID: ${SLURM_JOB_ID:-not submitted through Slurm}"
+echo "Container runtime: $CONTAINER_RUNTIME"
+echo "Preflight only unless RUN_ASSEMBLY=YES."
+
+"$CONTAINER_RUNTIME" exec "$CONTAINER_IMAGE" masurca --help
+
+if [[ "$RUN_ASSEMBLY" != "YES" ]]; then
+  echo "Preflight succeeded. No assembly was launched."
+  exit 0
+fi
+
+echo "RUN_ASSEMBLY=YES: generating MaSuRCA assembly script."
+"$CONTAINER_RUNTIME" exec --bind "$PROJECT_DIR:/work" "$CONTAINER_IMAGE" \
+  sh -lc 'cd /work && masurca "$1"' sh "$MASURCA_CONFIG"
+
+if [[ ! -s "$PROJECT_DIR/assemble.sh" ]]; then
+  echo "ERROR: MaSuRCA did not create /work/assemble.sh. Check config and bind paths." >&2
+  exit 1
+fi
+
+echo "Starting assembly.sh. Ensure the config and read paths are valid inside /work."
+"$CONTAINER_RUNTIME" exec --bind "$PROJECT_DIR:/work" "$CONTAINER_IMAGE" \
+  bash -lc 'cd /work && bash assemble.sh'
