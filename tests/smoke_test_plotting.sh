@@ -13,7 +13,7 @@ Synthetic_A,1000000,25000,120,85
 Synthetic_B,1100000,40000,90,90
 CSV
 
-docker run --rm --entrypoint python \
+docker run --rm --user "$(id -u):$(id -g)" --entrypoint python \
   -v "$TMP_DIR:/work" -w /work \
   "$IMAGE" /app/plot_assembly test_metrics.csv --outdir test-output
 
